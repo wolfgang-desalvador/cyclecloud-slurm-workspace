@@ -1,0 +1,39 @@
+[
+    {
+        "Order": 17000,
+        "ClusterName": "slurm_template_ccw",
+        "AdType": "Cloud.ClusterParameter",
+        "Label": "Monitoring Enabled",
+        "Description": "Enable sending monitoring data (true/false).",
+        "Name": "MonitoringEnabled",
+        "Section": "Monitoring",
+        "Value": false,
+        "DefaultValue": false,
+        "Widget": {
+            "Label": "Enable monitoring for nodes",
+            "Plugin": "pico.form.BooleanCheckBox"
+        }
+    },
+    {
+        "Order": 17100,
+        "ClusterName": "slurm_template_ccw",
+        "AdType": "Cloud.ClusterParameter",
+        "Label": "Monitoring Identity Client Id",
+        "Description": "Client ID of the Managed Identity used for monitoring ingestion authorization.",
+        "Name": "MonitoringIdentityClientId",
+        "Section": "Monitoring",
+        "Value": null,
+        "ParameterType": "String"
+    },
+    {
+        "Order": 17200,
+        "ClusterName": "slurm_template_ccw",
+        "AdType": "Cloud.ClusterParameter",
+        "Label": "Monitoring Ingestion Endpoint",
+        "Description": "Endpoint URL where monitoring data is ingested (e.g. Azure Monitor custom endpoint).",
+        "Name": "MonitoringIngestionEndpoint",
+        "Section": "Monitoring",
+        "Value": null,
+        "ParameterType": "String"
+    }
+]

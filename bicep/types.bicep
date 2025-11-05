@@ -312,6 +312,14 @@ type prestaged_cluster_init_t = {
   target: cluster_init_target_t[]
 }
 
+@export()
+type monitoring_t = {
+  enabled: bool
+  prometheusMode: string
+  ingestionEndpoint: string
+  identityClientId: string
+}
+
 @discriminator('type')
 type cluster_init_t = github_cluster_init_t | prestaged_cluster_init_t
 

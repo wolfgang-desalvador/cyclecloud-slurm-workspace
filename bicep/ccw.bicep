@@ -9,6 +9,16 @@ param branch string
 param projectVersion string
 param oodProjectVersion string
 param pyxisProjectVersion string
+param monitoringProjectVersion string
+
+@description('Enable monitoring agents on cluster nodes')
+param monitoringEnabled bool = false
+@description('Managed Identity client ID used for monitoring ingestion auth (optional)')
+param monitoringIdentityClientId string = ''
+@description('Monitoring ingestion endpoint URL (optional)')
+param monitoringIngestionEndpoint string = ''
+@description('Monitoring Prometheus mode')
+param monitoringPrometheusMode string
 
 param adminUsername string
 @secure()
@@ -287,6 +297,15 @@ module oodApp 'ood/oodEntraApp.bicep' = if (registerOODApp) {
   }
 }
 
+module monitoring 'monitoring.bicep' = if (monitoringEnabled && monitoringPrometheusMode == 'new') {
+  name: 'ccwMonitoring'
+  params: {
+    location: location
+    grafanaName: 'ccw-dash-${uniqueString(az.resourceGroup().id)}'
+    monitorName: 'ccw-mon-${uniqueString(az.resourceGroup().id)}'
+    principalUserId: ccwManagedIdentity.outputs.principalId
+  }
+}
 output filerInfoFinal types.filerInfo_t = {
   home: {
     type: sharedFilesystem.type
@@ -316,6 +335,7 @@ output filerInfoFinal types.filerInfo_t = {
 output cyclecloudPrincipalId string = infrastructureOnly ? '' : ccwVM.outputs.principalId
 
 output managedIdentityId string = infrastructureOnly ? '' : ccwManagedIdentity.outputs.managedIdentityId
+output principalId string = infrastructureOnly ? '' : ccwManagedIdentity.outputs.principalId
 
 // Automatically inject the ccw and pyxis cluster init specs
 
@@ -333,8 +353,15 @@ var pyxisClusterInitSpec = {
   target: ['login', 'scheduler', 'htc', 'hpc', 'gpu', 'dynamic']
 }
 
+var monitoringClusterInitSpecs = {
+  type: 'gitHubReleaseURL'
+  gitHubReleaseURL: uri('https://github.com/Azure/cyclecloud-monitoring/releases/tag/', monitoringProjectVersion)
+  spec: 'default'
+  target: ['login', 'scheduler', 'htc', 'hpc', 'gpu', 'dynamic']
+}
+
 // Projects <= 2025.02.06 have the pyxis logic embedded in the ccw cluster init spec
-var requiredClusterInitSpecs = [ccwClusterInitSpec, pyxisClusterInitSpec]
+var requiredClusterInitSpecs = monitoringEnabled ? [ccwClusterInitSpec, pyxisClusterInitSpec, monitoringClusterInitSpecs] : [ccwClusterInitSpec, pyxisClusterInitSpec]
 
 output clusterInitSpecs types.cluster_init_param_t = union(requiredClusterInitSpecs, clusterInitSpecs)
 
@@ -405,7 +432,17 @@ output oodManualRegistration object = {
 
 output files object = {
   availability_zones_json: loadTextContent('./files-to-load/encoded/availability_zones.json.base64')
+  monitoring_json: loadTextContent('./files-to-load/encoded/monitoring.json.base64')
   create_cc_param_py: loadTextContent('./files-to-load/encoded/create_cc_param.py.base64')
   cyclecloud_install_py: loadTextContent('./files-to-load/encoded/cyclecloud_install.py.base64')
   initial_params_json: loadTextContent('./files-to-load/encoded/initial_params.json.base64')
+}
+
+// Monitoring configuration output for downstream parameter injection
+output monitoring object = {
+  enabled: monitoringEnabled
+  dataCollectionRuleName: monitoringPrometheusMode == 'new' ?  split(monitoring.outputs.dataCollectionRuleId, '/')[8] : ''
+  dataCollectionRuleResourceGroup: monitoringPrometheusMode == 'new' ?  split(monitoring.outputs.dataCollectionRuleId, '/')[4] : ''
+  identityClientId: monitoringPrometheusMode == 'new' ? ccwManagedIdentity.outputs.clientId : monitoringIdentityClientId
+  ingestionEndpoint: monitoringPrometheusMode == 'new' ? monitoring.outputs.metricsIngestionEndpoint : monitoringIngestionEndpoint
 }

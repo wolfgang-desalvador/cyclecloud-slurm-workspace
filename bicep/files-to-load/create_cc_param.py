@@ -96,6 +96,16 @@ def set_slurm_params(params, dbPassword, outputs):
         params['AdditionalNFSMountOptions'] = outputs['filerInfoFinal']['value']['additional']['mountOptions']
         params['AdditionalNFSAddress'] = outputs['filerInfoFinal']['value']['additional']['ipAddress']
 
+    # Monitoring configuration
+    # These are optional and depend on the new bicep parameters & outputs.
+    monitoring = outputs.get('monitoring', {}).get('value', {})
+    params['MonitoringEnabled'] = bool(monitoring.get('enabled', False))
+    # Only set identity client id if provided (empty string means unset)
+    ident = monitoring.get('identityClientId')
+    params['MonitoringIdentityClientId'] = ident if ident else None
+    ingest = monitoring.get('ingestionEndpoint')
+    params['MonitoringIngestionEndpoint'] = ingest if ingest else None
+
 
 def set_ood_params(params, outputs):
     slurm_params = get_json_dict('initial_params.json')

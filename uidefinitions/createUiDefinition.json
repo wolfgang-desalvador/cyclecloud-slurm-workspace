@@ -2312,6 +2312,79 @@
                 "visible": "[and(not(or(empty(steps('slurmSettings').HTCSection.vmsize),empty(steps('slurmSettings').HPCSection.vmsize),empty(steps('slurmSettings').GPUSection.vmsize))),steps('advancedSettings').availabilityzone.defineAvailabilityZones)]"
               }
             ]
+          },
+          {
+            "name": "monitoringSection",
+            "type": "Microsoft.Common.Section",
+            "label": "Monitoring",
+            "elements": [
+              {
+                "name": "monitoringInfo",
+                "type": "Microsoft.Common.TextBlock",
+                "visible": true,
+                "options": {
+                  "text": "Optional monitoring configuration. Enable to deploy monitoring sidecar/agents. Provide Managed Identity client ID and ingestion endpoint if required for data collection authorization."
+                }
+              },
+              {
+                "name": "monitoringEnabled",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Enable monitoring",
+                "toolTip": "Deploy monitoring agents and enable data collection.",
+                "defaultValue": false,
+                "constraints": {
+                  "required": false
+                }
+              },
+              {
+                "name": "monitoringPrometheusMode",
+                "type": "Microsoft.Common.DropDown",
+                "label": "Prometheus workspace",
+                "toolTip": "Choose whether to deploy a new Azure Managed Prometheus or use an existing workspace.",
+                "defaultValue": "Use Existing Azure Managed Prometheus",
+                "constraints": {
+                  "required": true,
+                  "allowedValues": [
+                    { "label": "Use Existing Azure Managed Prometheus", "value": "existing" },
+                    { "label": "Deploy New Azure Managed Prometheus", "value": "new" }
+                  ]
+                },
+                "visible": "[steps('advancedSettings').monitoringSection.monitoringEnabled]"
+              },
+              {
+                "name": "monitoringIdentityClientId",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Monitoring Identity Client ID",
+                "toolTip": "Client ID of the managed identity used to authenticate ingestion (optional).",
+                "constraints": {
+                  "required": false,
+                  "validations": [
+                    {
+                      "regex": "^[0-9a-fA-F-]{0,}$",
+                      "message": "Client ID should be a GUID (hex and dashes)."
+                    }
+                  ]
+                },
+                "visible": "[and(steps('advancedSettings').monitoringSection.monitoringEnabled,equals(steps('advancedSettings').monitoringSection.monitoringPrometheusMode,'existing'))]"
+              },
+              {
+                "name": "monitoringIngestionEndpoint",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Monitoring Ingestion Endpoint",
+                "toolTip": "Endpoint URL for monitoring data ingestion (optional).",
+                "constraints": {
+                  "required": false,
+                  "validations": [
+                    {
+                      "regex": "^https?://.*$",
+                      "message": "Must be a valid http or https URL."
+                    }
+                  ]
+                },
+                "visible": "[and(steps('advancedSettings').monitoringSection.monitoringEnabled,equals(steps('advancedSettings').monitoringSection.monitoringPrometheusMode,'existing'))]"
+              }
+            ],
+            "visible": true
           }
         ]
       },
@@ -2392,6 +2465,12 @@
         "vnetLink": "[if(or(equals(steps('networking').newexisting,'new'),equals(steps('networking').dnsZone.newExisting,'new')),basics('nullValue'),if(not(equals(length(filter(steps('networking').dnsZone.vnetLinkProvidersApi.value, (item) => equals(item.properties.virtualNetwork.id,steps('networking').networkSettings.networkSelector.id))),1)),steps('networking').vnetLink.createVnetLink,false))]"
       },
       "databaseAdminPassword": "[if(steps('scheduler').schedulerSection.slurmAccounting,steps('scheduler').schedulerSection.databaseAdminPassword,basics('nullValue'))]",
+      "monitoring": {
+        "enabled": "[steps('advancedSettings').monitoringSection.monitoringEnabled]",
+        "prometheusMode": "[if(steps('advancedSettings').monitoringSection.monitoringEnabled, steps('advancedSettings').monitoringSection.monitoringPrometheusMode, 'disabled')]",
+        "identityClientId": "[steps('advancedSettings').monitoringSection.monitoringIdentityClientId]",
+        "ingestionEndpoint": "[steps('advancedSettings').monitoringSection.monitoringIngestionEndpoint]"
+      },
       "databaseConfig": {
         "type": "[if(steps('scheduler').schedulerSection.slurmAccounting,steps('scheduler').schedulerSection.dbConnection,'disabled')]",
         "databaseUser": "[if(steps('scheduler').schedulerSection.slurmAccounting,steps('scheduler').schedulerSection.databaseUser,basics('nullValue'))]",

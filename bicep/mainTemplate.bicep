@@ -15,6 +15,7 @@ param resourceGroup string
 param sharedFilesystem types.sharedFilesystem_t
 param additionalFilesystem types.additionalFilesystem_t = { type: 'disabled' }
 param network types.vnet_t
+param monitoring types.monitoring_t
 param storagePrivateDnsZone types.storagePrivateDnsZone_t
 param clusterInitSpecs types.cluster_init_param_t = []
 param slurmSettings types.slurmSettings_t = { startCluster: true, version: '23.11.7-1', healthCheckEnabled: false }
@@ -43,6 +44,7 @@ param projectVersion string = '2025.09.15'
 // Must be updated with each Open OnDemand release
 param oodProjectVersion string = '1.1.1'
 param pyxisProjectVersion string = '1.0.0'
+param monitoringProjectVersion string = '1.0.3'
 //Internal developer use only: set true use custom CycleCloud release build 
 param manualInstall bool = false
 
@@ -85,8 +87,21 @@ module makeCCWresources 'ccw.bicep' = {
     projectVersion: projectVersion
     oodProjectVersion: oodProjectVersion
     pyxisProjectVersion: pyxisProjectVersion
+    monitoringProjectVersion: monitoringProjectVersion
+    monitoringEnabled: monitoring.enabled
+    monitoringPrometheusMode: monitoring.prometheusMode
+    monitoringIdentityClientId: monitoring.identityClientId
+    monitoringIngestionEndpoint: monitoring.ingestionEndpoint
     manualInstall: manualInstall
     acceptMarketplaceTerms: acceptMarketplaceTerms
     ood: ood
+  }
+}
+
+module monitoringRoleAssignment 'dataCollectionRulePublisher.bicep' = {
+  params: {
+    principalId: makeCCWresources.outputs.principalId
+    dcrName: makeCCWresources.outputs.monitoring.dataCollectionRuleName
+    dcrResourceGroupName: makeCCWresources.outputs.monitoring.dataCollectionRuleResourceGroup
   }
 }
